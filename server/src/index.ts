@@ -1,6 +1,9 @@
 import express from 'express';
 import fs from 'fs';
 import { Database, MongoDatabase, FileDatabase } from './database';
+import initDB from './init';
+
+initDB();
 
 const app = express();
 const port = 5000;
@@ -10,13 +13,7 @@ let db: Database;
 if (process.env.RUNNING_IN_DOCKER) {
   db = new MongoDatabase('mongodb://mongo:27017', 'kanban');
 } else {
-  if (!fs.existsSync('./data/phases.json')) {
-    fs.writeFileSync('./data/phases.json', '[]');
-  }
-  if (!fs.existsSync('./data/tasks.json')) {
-    fs.writeFileSync('./data/tasks.json', '[]');
-  }
-  db = new FileDatabase('./data/phases.json', './data/tasks.json');
+  db = new FileDatabase('../data/phases.json', './data/tasks.json');
 }
 
 app.get('/phases', async (req, res) => {
@@ -39,7 +36,7 @@ app.delete('/phases/:id', async (req, res) => {
   res.status(204).end();
 });
 
-app.get('/tasks/:phaseId', async (req, res) => {
+app.get('/phases/:phaseId/tasks/', async (req, res) => {
   const tasks = await db.getTasks(req.params.phaseId);
   res.json(tasks);
 });
