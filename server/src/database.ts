@@ -129,54 +129,66 @@ class MongoDatabase implements Database {
 }
 
 class FileDatabase implements Database {
-    private dbPath: string;
+    private boardsDbPath: string;
+    private tasksDbPath: string;
 
-    constructor(dbPath: string) {
-        this.dbPath = dbPath;
+    constructor(boardsDbPath: string, tasksDbPath: string) {
+        this.boardsDbPath = boardsDbPath;
+        this.tasksDbPath = tasksDbPath;
     }
 
-    private readDB() {
-        const data = fs.readFileSync(this.dbPath, 'utf8');
+    private readBoardsDB() {
+        const data = fs.readFileSync(this.boardsDbPath, 'utf8');
         return JSON.parse(data);
     }
 
-    private writeDB(data: any) {
+    private writeBoardsDB(data: any) {
         const jsonData = JSON.stringify(data, null, 2);
-        fs.writeFileSync(this.dbPath, jsonData);
+        fs.writeFileSync(this.boardsDbPath, jsonData);
+    }
+
+    private readTasksDB() {
+        const data = fs.readFileSync(this.tasksDbPath, 'utf8');
+        return JSON.parse(data);
+    }
+
+    private writeTasksDB(data: any) {
+        const jsonData = JSON.stringify(data, null, 2);
+        fs.writeFileSync(this.tasksDbPath, jsonData);
     }
 
     async getBoards() {
-        const data = this.readDB();
+        const data = this.readBoardsDB();
         return data.boards || [];
     }
 
     async createBoard(name: string) {
-        const data = this.readDB();
+        const data = this.readBoardsDB();
         const newBoard = { id: Date.now().toString(), name, taskIds: [], createdAt: new Date(), updatedAt: new Date() };
         data.boards.push(newBoard);
-        this.writeDB(data);
+        this.writeBoardsDB(data);
         return newBoard;
     }
 
     async updateBoard(id: string, name: string) {
-        const data = this.readDB();
+        const data = this.readBoardsDB();
         const board = data.boards.find((b: any) => b.id === id);
         if (board) {
             board.name = name;
             board.updatedAt = new Date();
-            this.writeDB(data);
+            this.writeBoardsDB(data);
         }
         return board;
     }
 
     async deleteBoard(id: string) {
-        const data = this.readDB();
+        const data = this.readBoardsDB();
         data.boards = data.boards.filter((b: any) => b.id !== id);
-        this.writeDB(data);
+        this.writeBoardsDB(data);
     }
 
     async getTasks(boardId: string) {
-        const data = this.readDB();
+        const data = this.readTasksDB();
         const tasks = data.tasks.filter((t: any) => t.boardId === boardId);
         const board = data.boards.find((b: any) => b.id === boardId);
 
@@ -188,7 +200,7 @@ class FileDatabase implements Database {
     }
 
     async createTask(boardId: string, name: string) {
-        const data = this.readDB();
+        const data = this.readTasksDB();
         const newTask = { id: Date.now().toString(), boardId, name, createdAt: new Date(), updatedAt: new Date() };
 
         data.tasks.push(newTask);
@@ -197,23 +209,23 @@ class FileDatabase implements Database {
             board.taskIds.push(newTask.id);
         }
 
-        this.writeDB(data);
+        this.writeTasksDB(data);
         return newTask;
     }
 
     async updateTask(id: string, name: string) {
-        const data = this.readDB();
+        const data = this.readTasksDB();
         const task = data.tasks.find((t: any) => t.id === id);
         if (task) {
             task.name = name;
             task.updatedAt = new Date();
-            this.writeDB(data);
+            this.writeTasksDB(data);
         }
         return task;
     }
 
     async deleteTask(id: string) {
-        const data = this.readDB();
+        const data = this.readTasksDB();
 
         const taskIndex = data.tasks.findIndex((t: any) => t.id === id);
         if (taskIndex > -1) {
@@ -224,11 +236,11 @@ class FileDatabase implements Database {
             }
         }
 
-        this.writeDB(data);
+        this.writeTasksDB(data);
     }
 
     async moveTask(taskId: string, sourceBoardId: string, targetBoardId: string, newPosition: number) {
-        const data = this.readDB();
+        const data = this.readTasksDB();
 
         // If the task is moved within the same board
         if (sourceBoardId === targetBoardId) {
