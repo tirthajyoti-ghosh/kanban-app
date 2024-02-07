@@ -10,6 +10,7 @@ interface Database {
     createTask(boardId: string, name: string): Promise<any>;
     updateTask(id: string, name: string): Promise<any>;
     deleteTask(id: string): Promise<any>;
+    moveTask(taskId: string, sourceBoardId: string, targetBoardId: string, newPosition: number): Promise<any>;
 }
 
 class MongoDatabase implements Database {
@@ -164,7 +165,7 @@ class FileDatabase implements Database {
 
     async createBoard(name: string) {
         const data = this.readBoardsDB();
-        const newBoard = { id: Date.now().toString(), name, taskIds: [], createdAt: new Date(), updatedAt: new Date() };
+        const newBoard = { _id: new ObjectId().toString(), name, taskIds: [], createdAt: new Date(), updatedAt: new Date() };
         data.boards.push(newBoard);
         this.writeBoardsDB(data);
         return newBoard;
@@ -201,12 +202,12 @@ class FileDatabase implements Database {
 
     async createTask(boardId: string, name: string) {
         const data = this.readTasksDB();
-        const newTask = { id: Date.now().toString(), boardId, name, createdAt: new Date(), updatedAt: new Date() };
+        const newTask = { _id: new ObjectId().toString(), boardId, name, createdAt: new Date(), updatedAt: new Date() };
 
         data.tasks.push(newTask);
         const board = data.boards.find((b: any) => b.id === boardId);
         if (board) {
-            board.taskIds.push(newTask.id);
+            board.taskIds.push(newTask._id);
         }
 
         this.writeTasksDB(data);
