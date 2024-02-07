@@ -3,7 +3,9 @@ services:
   server:
     build: ./server
     volumes:
-      - ./server:/usr/src/app
+      - type: bind
+        source: ./server
+        target: /usr/src/app
     ports:
       - '5000:5000'
     links:
@@ -13,12 +15,16 @@ services:
   client:
     build: ./client
     volumes:
-      - ./client:/usr/src/app
+      - type: bind
+        source: ./client
+        target: /usr/src/app
     ports:
       - '3000:3000'
   mongo:
     image: mongo
     volumes:
-      - ./data:/data/db
+      - type: bind
+        source: ./data
+        target: /data/db
     ports:
       - '27017:27017'
