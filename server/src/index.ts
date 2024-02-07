@@ -10,42 +10,42 @@ let db: Database;
 if (process.env.RUNNING_IN_DOCKER) {
   db = new MongoDatabase('mongodb://mongo:27017', 'kanban');
 } else {
-  if (!fs.existsSync('./data/boards.json')) {
-    fs.writeFileSync('./data/boards.json', '[]');
+  if (!fs.existsSync('./data/phases.json')) {
+    fs.writeFileSync('./data/phases.json', '[]');
   }
   if (!fs.existsSync('./data/tasks.json')) {
     fs.writeFileSync('./data/tasks.json', '[]');
   }
-  db = new FileDatabase('./data/boards.json', './data/tasks.json');
+  db = new FileDatabase('./data/phases.json', './data/tasks.json');
 }
 
-app.get('/boards', async (req, res) => {
-  const boards = await db.getBoards();
-  res.json(boards);
+app.get('/phases', async (req, res) => {
+  const phases = await db.getPhases();
+  res.json(phases);
 });
 
-app.post('/boards', async (req, res) => {
-  const board = await db.createBoard(req.body.name);
-  res.json(board);
+app.post('/phases', async (req, res) => {
+  const phase = await db.createPhase(req.body.name);
+  res.json(phase);
 });
 
-app.put('/boards/:id', async (req, res) => {
-  const board = await db.updateBoard(req.params.id, req.body.name);
-  res.json(board);
+app.put('/phases/:id', async (req, res) => {
+  const phase = await db.updatePhase(req.params.id, req.body.name);
+  res.json(phase);
 });
 
-app.delete('/boards/:id', async (req, res) => {
-  await db.deleteBoard(req.params.id);
+app.delete('/phases/:id', async (req, res) => {
+  await db.deletePhase(req.params.id);
   res.status(204).end();
 });
 
-app.get('/tasks/:boardId', async (req, res) => {
-  const tasks = await db.getTasks(req.params.boardId);
+app.get('/tasks/:phaseId', async (req, res) => {
+  const tasks = await db.getTasks(req.params.phaseId);
   res.json(tasks);
 });
 
-app.post('/tasks/:boardId', async (req, res) => {
-  const task = await db.createTask(req.params.boardId, req.body.name);
+app.post('/tasks/:phaseId', async (req, res) => {
+  const task = await db.createTask(req.params.phaseId, req.body.name);
   res.json(task);
 });
 
@@ -60,8 +60,8 @@ app.delete('/tasks/:id', async (req, res) => {
 });
 
 app.put('/tasks/:id/move', async (req, res) => {
-  const { sourceBoardId, targetBoardId, newPosition } = req.body;
-  const task = await db.moveTask(req.params.id, sourceBoardId, targetBoardId, newPosition);
+  const { sourcePhaseId, targetPhaseId, newPosition } = req.body;
+  const task = await db.moveTask(req.params.id, sourcePhaseId, targetPhaseId, newPosition);
   res.json(task);
 });
 

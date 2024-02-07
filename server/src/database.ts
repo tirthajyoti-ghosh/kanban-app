@@ -2,15 +2,15 @@ import fs from 'fs';
 import { MongoClient, ObjectId } from 'mongodb';
 
 interface Database {
-    getBoards(): Promise<any[]>;
-    createBoard(name: string): Promise<any>;
-    updateBoard(id: string, name: string): Promise<any>;
-    deleteBoard(id: string): Promise<any>;
-    getTasks(boardId: string): Promise<any[]>;
-    createTask(boardId: string, name: string): Promise<any>;
+    getPhases(): Promise<any[]>;
+    createPhase(name: string): Promise<any>;
+    updatePhase(id: string, name: string): Promise<any>;
+    deletePhase(id: string): Promise<any>;
+    getTasks(phaseId: string): Promise<any[]>;
+    createTask(phaseId: string, name: string): Promise<any>;
     updateTask(id: string, name: string): Promise<any>;
     deleteTask(id: string): Promise<any>;
-    moveTask(taskId: string, sourceBoardId: string, targetBoardId: string, newPosition: number): Promise<any>;
+    moveTask(taskId: string, sourcePhaseId: string, targetPhaseId: string, newPosition: number): Promise<any>;
 }
 
 class MongoDatabase implements Database {
@@ -30,50 +30,50 @@ class MongoDatabase implements Database {
         await this.client.close();
     }
 
-    async getBoards() {
-        const col = this.client.db(this.dbName).collection('boards');
+    async getPhases() {
+        const col = this.client.db(this.dbName).collection('phases');
         return await col.find().toArray();
     }
 
-    async createBoard(name: string) {
-        const col = this.client.db(this.dbName).collection('boards');
+    async createPhase(name: string) {
+        const col = this.client.db(this.dbName).collection('phases');
         const result = await col.insertOne({ name, taskIds: [], createdAt: new Date(), updatedAt: new Date() });
         return result.insertedId;
     }
 
-    async updateBoard(id: string, name: string) {
-        const col = this.client.db(this.dbName).collection('boards');
+    async updatePhase(id: string, name: string) {
+        const col = this.client.db(this.dbName).collection('phases');
         await col.updateOne({ _id: new ObjectId(id) }, { $set: { name, updatedAt: new Date() } });
         return await col.findOne({ _id: new ObjectId(id) });
     }
 
-    async deleteBoard(id: string) {
-        const col = this.client.db(this.dbName).collection('boards');
+    async deletePhase(id: string) {
+        const col = this.client.db(this.dbName).collection('phases');
         await col.deleteOne({ _id: new ObjectId(id) });
     }
 
-    async getTasks(boardId: string) {
+    async getTasks(phaseId: string) {
         const taskCol = this.client.db(this.dbName).collection('tasks');
-        const boardCol = this.client.db(this.dbName).collection('boards');
+        const phaseCol = this.client.db(this.dbName).collection('phases');
 
-        const tasks = await taskCol.find({ boardId }).toArray();
-        const board = await boardCol.findOne({ _id: new ObjectId(boardId) });
+        const tasks = await taskCol.find({ phaseId }).toArray();
+        const phase = await phaseCol.findOne({ _id: new ObjectId(phaseId) });
 
-        if (board) {
-            tasks.sort((a, b) => board.taskIds.indexOf(a._id.toString()) - board.taskIds.indexOf(b._id.toString()));
+        if (phase) {
+            tasks.sort((a, b) => phase.taskIds.indexOf(a._id.toString()) - phase.taskIds.indexOf(b._id.toString()));
         }
 
         return tasks;
     }
 
-    async createTask(boardId: string, name: string) {
+    async createTask(phaseId: string, name: string) {
         const taskCol = this.client.db(this.dbName).collection('tasks');
-        const boardCol = this.client.db(this.dbName).collection('boards');
+        const phaseCol = this.client.db(this.dbName).collection('phases');
 
-        const result = await taskCol.insertOne({ boardId, name, createdAt: new Date(), updatedAt: new Date() });
+        const result = await taskCol.insertOne({ phaseId, name, createdAt: new Date(), updatedAt: new Date() });
         const newTask = result.insertedId;
 
-        await boardCol.updateOne({ _id: new ObjectId(boardId) }, { $push: { taskIds: newTask.toString() } });
+        await phaseCol.updateOne({ _id: new ObjectId(phaseId) }, { $push: { taskIds: newTask.toString() } });
 
         return newTask;
     }
@@ -86,66 +86,66 @@ class MongoDatabase implements Database {
 
     async deleteTask(id: string) {
         const taskCol = this.client.db(this.dbName).collection('tasks');
-        const boardCol = this.client.db(this.dbName).collection('boards');
+        const phaseCol = this.client.db(this.dbName).collection('phases');
 
         const task = await taskCol.findOne({ _id: new ObjectId(id) });
         if (task) {
             await taskCol.deleteOne({ _id: new ObjectId(id) });
-            await boardCol.updateOne({ _id: new ObjectId(task.boardId) }, { $pull: { taskIds: id } });
+            await phaseCol.updateOne({ _id: new ObjectId(task.phaseId) }, { $pull: { taskIds: id } });
         }
     }
 
-    async moveTask(taskId: string, sourceBoardId: string, targetBoardId: string, newPosition: number) {
-        const boardCol = this.client.db(this.dbName).collection('boards');
+    async moveTask(taskId: string, sourcePhaseId: string, targetPhaseId: string, newPosition: number) {
+        const phaseCol = this.client.db(this.dbName).collection('phases');
 
-        // If the task is moved within the same board
-        if (sourceBoardId === targetBoardId) {
-            const board = await boardCol.findOne({ _id: new ObjectId(sourceBoardId) });
-            if (board) {
-                const index = board.taskIds.indexOf(taskId);
+        // If the task is moved within the same phase
+        if (sourcePhaseId === targetPhaseId) {
+            const phase = await phaseCol.findOne({ _id: new ObjectId(sourcePhaseId) });
+            if (phase) {
+                const index = phase.taskIds.indexOf(taskId);
                 if (index > -1) {
-                    board.taskIds.splice(index, 1); // Remove taskId from its old position
-                    board.taskIds.splice(newPosition, 0, taskId); // Insert taskId at its new position
-                    await boardCol.updateOne({ _id: new ObjectId(sourceBoardId) }, { $set: { taskIds: board.taskIds } });
+                    phase.taskIds.splice(index, 1); // Remove taskId from its old position
+                    phase.taskIds.splice(newPosition, 0, taskId); // Insert taskId at its new position
+                    await phaseCol.updateOne({ _id: new ObjectId(sourcePhaseId) }, { $set: { taskIds: phase.taskIds } });
                 }
             }
         } 
-        // If the task is moved to a different board
+        // If the task is moved to a different phase
         else {
-            // Remove taskId from source board
-            await boardCol.updateOne({ _id: new ObjectId(sourceBoardId) }, { $pull: { taskIds: taskId } });
+            // Remove taskId from source phase
+            await phaseCol.updateOne({ _id: new ObjectId(sourcePhaseId) }, { $pull: { taskIds: taskId } });
 
-            // Add taskId to target board at the new position
-            const targetBoard = await boardCol.findOne({ _id: new ObjectId(targetBoardId) });
-            if (targetBoard) {
-                targetBoard.taskIds.splice(newPosition, 0, taskId);
-                await boardCol.updateOne({ _id: new ObjectId(targetBoardId) }, { $set: { taskIds: targetBoard.taskIds } });
+            // Add taskId to target phase at the new position
+            const targetPhase = await phaseCol.findOne({ _id: new ObjectId(targetPhaseId) });
+            if (targetPhase) {
+                targetPhase.taskIds.splice(newPosition, 0, taskId);
+                await phaseCol.updateOne({ _id: new ObjectId(targetPhaseId) }, { $set: { taskIds: targetPhase.taskIds } });
             }
         }
 
-        // Update boardId of the task
+        // Update phaseId of the task
         const taskCol = this.client.db(this.dbName).collection('tasks');
-        await taskCol.updateOne({ _id: new ObjectId(taskId) }, { $set: { boardId: targetBoardId } });
+        await taskCol.updateOne({ _id: new ObjectId(taskId) }, { $set: { phaseId: targetPhaseId } });
     }
 }
 
 class FileDatabase implements Database {
-    private boardsDbPath: string;
+    private PhasesDbPath: string;
     private tasksDbPath: string;
 
-    constructor(boardsDbPath: string, tasksDbPath: string) {
-        this.boardsDbPath = boardsDbPath;
+    constructor(PhasesDbPath: string, tasksDbPath: string) {
+        this.PhasesDbPath = PhasesDbPath;
         this.tasksDbPath = tasksDbPath;
     }
 
-    private readBoardsDB() {
-        const data = fs.readFileSync(this.boardsDbPath, 'utf8');
+    private readPhasesDB() {
+        const data = fs.readFileSync(this.PhasesDbPath, 'utf8');
         return JSON.parse(data);
     }
 
-    private writeBoardsDB(data: any) {
+    private writePhasesDB(data: any) {
         const jsonData = JSON.stringify(data, null, 2);
-        fs.writeFileSync(this.boardsDbPath, jsonData);
+        fs.writeFileSync(this.PhasesDbPath, jsonData);
     }
 
     private readTasksDB() {
@@ -158,56 +158,56 @@ class FileDatabase implements Database {
         fs.writeFileSync(this.tasksDbPath, jsonData);
     }
 
-    async getBoards() {
-        const data = this.readBoardsDB();
-        return data.boards || [];
+    async getPhases() {
+        const data = this.readPhasesDB();
+        return data.phases || [];
     }
 
-    async createBoard(name: string) {
-        const data = this.readBoardsDB();
-        const newBoard = { _id: new ObjectId().toString(), name, taskIds: [], createdAt: new Date(), updatedAt: new Date() };
-        data.boards.push(newBoard);
-        this.writeBoardsDB(data);
-        return newBoard;
+    async createPhase(name: string) {
+        const data = this.readPhasesDB();
+        const newPhase = { _id: new ObjectId().toString(), name, taskIds: [], createdAt: new Date(), updatedAt: new Date() };
+        data.phases.push(newPhase);
+        this.writePhasesDB(data);
+        return newPhase;
     }
 
-    async updateBoard(id: string, name: string) {
-        const data = this.readBoardsDB();
-        const board = data.boards.find((b: any) => b.id === id);
-        if (board) {
-            board.name = name;
-            board.updatedAt = new Date();
-            this.writeBoardsDB(data);
+    async updatePhase(id: string, name: string) {
+        const data = this.readPhasesDB();
+        const phase = data.phases.find((b: any) => b.id === id);
+        if (phase) {
+            phase.name = name;
+            phase.updatedAt = new Date();
+            this.writePhasesDB(data);
         }
-        return board;
+        return phase;
     }
 
-    async deleteBoard(id: string) {
-        const data = this.readBoardsDB();
-        data.boards = data.boards.filter((b: any) => b.id !== id);
-        this.writeBoardsDB(data);
+    async deletePhase(id: string) {
+        const data = this.readPhasesDB();
+        data.phases = data.phases.filter((b: any) => b.id !== id);
+        this.writePhasesDB(data);
     }
 
-    async getTasks(boardId: string) {
+    async getTasks(phaseId: string) {
         const data = this.readTasksDB();
-        const tasks = data.tasks.filter((t: any) => t.boardId === boardId);
-        const board = data.boards.find((b: any) => b.id === boardId);
+        const tasks = data.tasks.filter((t: any) => t.phaseId === phaseId);
+        const phase = data.phases.find((b: any) => b.id === phaseId);
 
-        if (board) {
-            tasks.sort((a: { id: any; }, b: { id: any; }) => board.taskIds.indexOf(a.id) - board.taskIds.indexOf(b.id));
+        if (phase) {
+            tasks.sort((a: { id: any; }, b: { id: any; }) => phase.taskIds.indexOf(a.id) - phase.taskIds.indexOf(b.id));
         }
 
         return tasks;
     }
 
-    async createTask(boardId: string, name: string) {
+    async createTask(phaseId: string, name: string) {
         const data = this.readTasksDB();
-        const newTask = { _id: new ObjectId().toString(), boardId, name, createdAt: new Date(), updatedAt: new Date() };
+        const newTask = { _id: new ObjectId().toString(), phaseId, name, createdAt: new Date(), updatedAt: new Date() };
 
         data.tasks.push(newTask);
-        const board = data.boards.find((b: any) => b.id === boardId);
-        if (board) {
-            board.taskIds.push(newTask._id);
+        const phase = data.phases.find((b: any) => b.id === phaseId);
+        if (phase) {
+            phase.taskIds.push(newTask._id);
         }
 
         this.writeTasksDB(data);
@@ -231,41 +231,41 @@ class FileDatabase implements Database {
         const taskIndex = data.tasks.findIndex((t: any) => t.id === id);
         if (taskIndex > -1) {
             const [task] = data.tasks.splice(taskIndex, 1);
-            const board = data.boards.find((b: any) => b.id === task.boardId);
-            if (board) {
-                board.taskIds = board.taskIds.filter((taskId: string) => taskId !== id);
+            const phase = data.phases.find((b: any) => b.id === task.phaseId);
+            if (phase) {
+                phase.taskIds = phase.taskIds.filter((taskId: string) => taskId !== id);
             }
         }
 
         this.writeTasksDB(data);
     }
 
-    async moveTask(taskId: string, sourceBoardId: string, targetBoardId: string, newPosition: number) {
+    async moveTask(taskId: string, sourcePhaseId: string, targetPhaseId: string, newPosition: number) {
         const data = this.readTasksDB();
 
-        // If the task is moved within the same board
-        if (sourceBoardId === targetBoardId) {
-            const board = data.boards.find((b: any) => b.id === sourceBoardId);
-            if (board) {
-                const index = board.taskIds.indexOf(taskId);
+        // If the task is moved within the same phase
+        if (sourcePhaseId === targetPhaseId) {
+            const phase = data.phases.find((b: any) => b.id === sourcePhaseId);
+            if (phase) {
+                const index = phase.taskIds.indexOf(taskId);
                 if (index > -1) {
-                    board.taskIds.splice(index, 1); // Remove taskId from its old position
-                    board.taskIds.splice(newPosition, 0, taskId); // Insert taskId at its new position
+                    phase.taskIds.splice(index, 1); // Remove taskId from its old position
+                    phase.taskIds.splice(newPosition, 0, taskId); // Insert taskId at its new position
                 }
             }
         }
-        // If the task is moved to a different board
+        // If the task is moved to a different phase
         else {
-            // Remove taskId from source board
-            const sourceBoard = data.boards.find((b: any) => b.id === sourceBoardId);
-            if (sourceBoard) {
-                sourceBoard.taskIds = sourceBoard.taskIds.filter((id: string) => id !== taskId);
+            // Remove taskId from source phase
+            const sourcePhase = data.phases.find((b: any) => b.id === sourcePhaseId);
+            if (sourcePhase) {
+                sourcePhase.taskIds = sourcePhase.taskIds.filter((id: string) => id !== taskId);
             }
 
-            // Add taskId to target board at the new position
-            const targetBoard = data.boards.find((b: any) => b.id === targetBoardId);
-            if (targetBoard) {
-                targetBoard.taskIds.splice(newPosition, 0, taskId);
+            // Add taskId to target phase at the new position
+            const targetPhase = data.phases.find((b: any) => b.id === targetPhaseId);
+            if (targetPhase) {
+                targetPhase.taskIds.splice(newPosition, 0, taskId);
             }
         }
     }
