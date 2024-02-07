@@ -109,7 +109,7 @@ class MongoDatabase implements Database {
                     await phaseCol.updateOne({ _id: new ObjectId(sourcePhaseId) }, { $set: { taskIds: phase.taskIds } });
                 }
             }
-        } 
+        }
         // If the task is moved to a different phase
         else {
             // Remove taskId from source phase
@@ -130,22 +130,22 @@ class MongoDatabase implements Database {
 }
 
 class FileDatabase implements Database {
-    private PhasesDbPath: string;
+    private phasesDbPath: string;
     private tasksDbPath: string;
 
     constructor(PhasesDbPath: string, tasksDbPath: string) {
-        this.PhasesDbPath = PhasesDbPath;
+        this.phasesDbPath = PhasesDbPath;
         this.tasksDbPath = tasksDbPath;
     }
 
     private readPhasesDB() {
-        const data = fs.readFileSync(this.PhasesDbPath, 'utf8');
+        const data = fs.readFileSync(this.phasesDbPath, 'utf8');
         return JSON.parse(data);
     }
 
     private writePhasesDB(data: any) {
-        const jsonData = JSON.stringify(data, null, 2);
-        fs.writeFileSync(this.PhasesDbPath, jsonData);
+        const jsonData = JSON.stringify(data);
+        fs.writeFileSync(this.phasesDbPath, jsonData);
     }
 
     private readTasksDB() {
@@ -154,26 +154,26 @@ class FileDatabase implements Database {
     }
 
     private writeTasksDB(data: any) {
-        const jsonData = JSON.stringify(data, null, 2);
+        const jsonData = JSON.stringify(data);
         fs.writeFileSync(this.tasksDbPath, jsonData);
     }
 
     async getPhases() {
         const data = this.readPhasesDB();
-        return data.phases || [];
+        return data || [];
     }
 
     async createPhase(name: string) {
         const data = this.readPhasesDB();
         const newPhase = { _id: new ObjectId().toString(), name, taskIds: [], createdAt: new Date(), updatedAt: new Date() };
-        data.phases.push(newPhase);
+        data.push(newPhase);
         this.writePhasesDB(data);
         return newPhase;
     }
 
     async updatePhase(id: string, name: string) {
         const data = this.readPhasesDB();
-        const phase = data.phases.find((b: any) => b.id === id);
+        const phase = data.find((b: any) => b.id === id);
         if (phase) {
             phase.name = name;
             phase.updatedAt = new Date();
@@ -184,14 +184,14 @@ class FileDatabase implements Database {
 
     async deletePhase(id: string) {
         const data = this.readPhasesDB();
-        data.phases = data.phases.filter((b: any) => b.id !== id);
-        this.writePhasesDB(data);
+        this.writePhasesDB(data.filter((b: any) => b.id !== id));
     }
 
     async getTasks(phaseId: string) {
         const data = this.readTasksDB();
-        const tasks = data.tasks.filter((t: any) => t.phaseId === phaseId);
-        const phase = data.phases.find((b: any) => b.id === phaseId);
+        const phases = this.readPhasesDB();
+        const tasks = data.filter((t: any) => t.phaseId === phaseId);
+        const phase = phases.find((b: any) => b.id === phaseId);
 
         if (phase) {
             tasks.sort((a: { id: any; }, b: { id: any; }) => phase.taskIds.indexOf(a.id) - phase.taskIds.indexOf(b.id));
@@ -202,21 +202,23 @@ class FileDatabase implements Database {
 
     async createTask(phaseId: string, name: string) {
         const data = this.readTasksDB();
+        const phases = this.readPhasesDB();
         const newTask = { _id: new ObjectId().toString(), phaseId, name, createdAt: new Date(), updatedAt: new Date() };
 
-        data.tasks.push(newTask);
-        const phase = data.phases.find((b: any) => b.id === phaseId);
+        data.push(newTask);
+        const phase = phases.find((b: any) => b.id === phaseId);
         if (phase) {
             phase.taskIds.push(newTask._id);
         }
 
         this.writeTasksDB(data);
+        this.writePhasesDB(phases);
         return newTask;
     }
 
     async updateTask(id: string, name: string) {
         const data = this.readTasksDB();
-        const task = data.tasks.find((t: any) => t.id === id);
+        const task = data.find((t: any) => t.id === id);
         if (task) {
             task.name = name;
             task.updatedAt = new Date();
@@ -227,25 +229,28 @@ class FileDatabase implements Database {
 
     async deleteTask(id: string) {
         const data = this.readTasksDB();
+        const phases = this.readPhasesDB();
 
-        const taskIndex = data.tasks.findIndex((t: any) => t.id === id);
+        const taskIndex = data.findIndex((t: any) => t.id === id);
         if (taskIndex > -1) {
-            const [task] = data.tasks.splice(taskIndex, 1);
-            const phase = data.phases.find((b: any) => b.id === task.phaseId);
+            const [task] = data.splice(taskIndex, 1);
+            const phase = phases.find((b: any) => b.id === task.phaseId);
             if (phase) {
                 phase.taskIds = phase.taskIds.filter((taskId: string) => taskId !== id);
             }
         }
 
         this.writeTasksDB(data);
+        this.writePhasesDB(phases);
     }
 
     async moveTask(taskId: string, sourcePhaseId: string, targetPhaseId: string, newPosition: number) {
         const data = this.readTasksDB();
+        const phases = this.readPhasesDB();
 
         // If the task is moved within the same phase
         if (sourcePhaseId === targetPhaseId) {
-            const phase = data.phases.find((b: any) => b.id === sourcePhaseId);
+            const phase = phases.find((b: any) => b.id === sourcePhaseId);
             if (phase) {
                 const index = phase.taskIds.indexOf(taskId);
                 if (index > -1) {
@@ -257,17 +262,25 @@ class FileDatabase implements Database {
         // If the task is moved to a different phase
         else {
             // Remove taskId from source phase
-            const sourcePhase = data.phases.find((b: any) => b.id === sourcePhaseId);
+            const sourcePhase = phases.find((b: any) => b.id === sourcePhaseId);
             if (sourcePhase) {
                 sourcePhase.taskIds = sourcePhase.taskIds.filter((id: string) => id !== taskId);
             }
 
             // Add taskId to target phase at the new position
-            const targetPhase = data.phases.find((b: any) => b.id === targetPhaseId);
+            const targetPhase = phases.find((b: any) => b.id === targetPhaseId);
             if (targetPhase) {
                 targetPhase.taskIds.splice(newPosition, 0, taskId);
             }
         }
+        // Update boardId of the task
+        const task = data.find((t: any) => t.id === taskId);
+        if (task) {
+            task.boardId = targetPhaseId;
+        }
+
+        this.writeTasksDB(data);
+        this.writePhasesDB(phases);
     }
 }
 
