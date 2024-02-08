@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Draggable } from "react-beautiful-dnd";
+import axios from "axios";
 import EditTaskForm from "./EditTask";
 import { Task } from "./types";
 import { useTaskContext } from "./context/useTaskContext";
@@ -14,9 +15,17 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, index }) => {
     const [taskName, setTaskName] = useState(task.name);
     const [isEditing, setIsEditing] = useState(false);
 
-    const handleEditClick = () => {
+    const editTask = () => {
         setIsEditing(true);
     };
+
+    const deleteTask = async () => {
+        await axios.delete(`http://localhost:5000/tasks/${task._id}`);
+        syncData(phases.map((phase) => {
+            const updatedTasks = phase.tasks.filter((t) => t._id !== task._id);
+            return { ...phase, tasks: updatedTasks };
+        }));
+    }
 
     const handleCancelEdit = () => {
         setIsEditing(false);
@@ -52,11 +61,11 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, index }) => {
                                 }}
                             />
                         ) : (
-                            // Render the task details when isEditing is false
                             <>
                                 <p>{taskName}</p>
                                 {/* Button to open the edit form */}
-                                <button onClick={handleEditClick}>Edit</button>
+                                <button onClick={editTask}>Edit</button>
+                                <button onClick={deleteTask}>Delete</button>
                             </>
                         )}
                     </div>
