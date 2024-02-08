@@ -36,7 +36,11 @@ app.put('/phases/:id', async (req, res) => {
 });
 
 app.delete('/phases/:id', async (req, res) => {
-  await db.deletePhase(req.params.id);
+  if (!req.query.altPhaseId) {
+    res.status(400).json({ error: 'altPhaseId query parameter is required' });
+    return;
+  }
+  await db.deletePhase(req.params.id, req.query.altPhaseId as string);
   res.status(204).end();
 });
 

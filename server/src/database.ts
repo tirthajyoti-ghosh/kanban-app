@@ -5,7 +5,7 @@ interface Database {
     getPhases(): Promise<any[]>;
     createPhase(name: string): Promise<any>;
     updatePhase(id: string, name: string): Promise<any>;
-    deletePhase(id: string): Promise<any>;
+    deletePhase(id: string, altPhaseId: string): Promise<any>;
     getTasks(phaseId: string): Promise<any[]>;
     createTask(phaseId: string, name: string): Promise<any>;
     updateTask(id: string, name: string): Promise<any>;
@@ -47,8 +47,19 @@ class MongoDatabase implements Database {
         return await col.findOne({ _id: new ObjectId(id) });
     }
 
-    async deletePhase(id: string) {
+    async deletePhase(id: string, altPhaseId: string) {
         const col = this.client.db(this.dbName).collection('phases');
+        const tasksCol = this.client.db(this.dbName).collection('tasks');
+        const phase = await col.findOne({ _id: new ObjectId(id) });
+        const altPhase = await col.findOne({ _id: new ObjectId(altPhaseId) });
+        if (!phase || !altPhase) {
+            return;
+        }
+
+        await tasksCol.updateMany({ phaseId: id }, { $set: { phaseId: altPhaseId } });
+        await col.updateOne({ _id: new ObjectId(altPhaseId) }, { $push: { taskIds: { $each: phase.taskIds } } });
+
+        // Delete the phase
         await col.deleteOne({ _id: new ObjectId(id) });
     }
 
@@ -182,9 +193,19 @@ class FileDatabase implements Database {
         return phase;
     }
 
-    async deletePhase(id: string) {
+    async deletePhase(id: string, altPhaseId: string) {
         const data = this.readPhasesDB();
-        this.writePhasesDB(data.filter((b: any) => b.id !== id));
+
+        const phaseIndex = data.findIndex((b: any) => b.id === id);
+        if (phaseIndex > -1) {
+            const [phase] = data.splice(phaseIndex, 1);
+            const altPhase = data.find((b: any) => b.id === altPhaseId);
+            if (altPhase) {
+                altPhase.taskIds.push(...phase.taskIds);
+            }
+        }
+        
+        this.writePhasesDB(data);
     }
 
     async getTasks(phaseId: string) {
