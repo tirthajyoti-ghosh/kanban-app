@@ -1,11 +1,15 @@
 import express from 'express';
-import fs from 'fs';
+import cors from 'cors';
 import { Database, MongoDatabase, FileDatabase } from './database';
 import initDB from './init';
 
 initDB();
 
 const app = express();
+app.use(cors());
+app.use(express.urlencoded({ extended: false }));
+app.use(express.json());
+
 const port = 5000;
 
 let db: Database;
@@ -41,7 +45,7 @@ app.get('/phases/:phaseId/tasks/', async (req, res) => {
   res.json(tasks);
 });
 
-app.post('/tasks/:phaseId', async (req, res) => {
+app.post('/phases/:phaseId/tasks', async (req, res) => {
   const task = await db.createTask(req.params.phaseId, req.body.name);
   res.json(task);
 });
