@@ -115,7 +115,7 @@ const KanbanBoard: React.FC = () => {
                 <div className="phases-container">
                     {phases.map((phase) => (
                         <div className="phase-column" key={phase._id}>
-                            <h2>{phase.name}</h2>
+                            <h2>{phase.name} ({phase.tasks.length})</h2>
                             <button onClick={() => setSelectedPhaseId(phase._id)}>
                                 Delete
                             </button>
