@@ -3,7 +3,7 @@ import axios from "axios";
 
 interface AddTaskProps {
     phaseId: string;
-    onTaskAdded: () => void;
+    onTaskAdded: ({ name, _id }: { name: string; _id: string }) => void;
 }
 
 const AddTaskForm: React.FC<AddTaskProps> = ({ phaseId, onTaskAdded }) => {
@@ -16,9 +16,12 @@ const AddTaskForm: React.FC<AddTaskProps> = ({ phaseId, onTaskAdded }) => {
     const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
         try {
-            await axios.post(`http://localhost:5000/phases/${phaseId}/tasks`, { name: taskName });
+            const { data } = await axios.post(
+                `http://localhost:5000/phases/${phaseId}/tasks`,
+                { name: taskName }
+            );
             setTaskName("");
-            onTaskAdded();
+            onTaskAdded({ name: taskName, _id: data });
         } catch (error) {
             console.error("Error adding task:", error);
         }

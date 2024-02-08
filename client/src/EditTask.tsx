@@ -4,7 +4,7 @@ import axios from "axios";
 interface EditTaskProps {
     taskId: string;
     initialName: string;
-    onSave: () => void;
+    onSave: (newName: string) => void;
     onCancel: () => void;
 }
 
@@ -23,8 +23,9 @@ const EditTaskForm: React.FC<EditTaskProps> = ({
     const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
         try {
-            await axios.put(`/tasks/${taskId}`, { name: taskName });
-            handleClose(); // Close the edit form after successful update
+            await axios.put(`http://localhost:5000/tasks/${taskId}`, { name: taskName });
+            handleSave(taskName);
+            handleClose();
         } catch (error) {
             console.error("Error updating task:", error);
         }
@@ -39,7 +40,7 @@ const EditTaskForm: React.FC<EditTaskProps> = ({
                 onChange={handleInputChange}
                 required
             />
-            <button type="submit">Update Task</button>
+            <button type="submit">Update</button>
             <button type="button" onClick={handleClose}>
                 Cancel
             </button>
