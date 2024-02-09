@@ -1,5 +1,8 @@
 import React, { useState } from "react";
 import axios from "axios";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
 
 interface AddTaskProps {
     phaseId: string;
@@ -28,15 +31,18 @@ const AddTaskForm: React.FC<AddTaskProps> = ({ phaseId, onTaskAdded }) => {
     };
 
     return (
-        <form onSubmit={handleSubmit}>
-            <input
+        <form
+            onSubmit={handleSubmit}
+            className="flex w-full max-w-sm items-center space-x-2 mt-4 border-t border-gray-300 pt-4"
+        >
+            <Input
                 type="text"
                 placeholder="Enter task name"
                 value={taskName}
                 onChange={handleInputChange}
                 required
             />
-            <button type="submit">Add Task</button>
+            <Button type="submit"><Plus /></Button>
         </form>
     );
 };

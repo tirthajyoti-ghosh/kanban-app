@@ -1,17 +1,18 @@
 import React, { useRef, useState } from "react";
 import axios from "axios";
-import { DragDropContext, Droppable, DropResult } from "react-beautiful-dnd";
-import TaskItem from "./TaskItem";
-import AddTaskForm from "./AddTask";
+import { DragDropContext, DropResult } from "react-beautiful-dnd";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { useTaskContext } from "./context/useTaskContext";
 import "./index.css";
-import DeletePhaseModal from "./DeletePhaseModal";
+import DeletePhaseModal from "./components/DeletePhaseModal";
+import PhaseColumn from "./components/PhaseColumn";
 
 const KanbanBoard: React.FC = () => {
     const { phases, syncData } = useTaskContext();
     const [selectedPhaseId, setSelectedPhaseId] = useState("");
-    const [newPhaseName, setNewPhaseName] = useState('');
-    const [searchQuery, setSearchQuery] = useState('');
+    const [newPhaseName, setNewPhaseName] = useState("");
+    const [searchQuery, setSearchQuery] = useState("");
     const inputRef = useRef<HTMLInputElement>(null);
 
     const onDragEnd = async (result: DropResult) => {
@@ -75,140 +76,72 @@ const KanbanBoard: React.FC = () => {
         }
     };
 
-    const handleAddPhase = async () => {
+    const handleAddPhase = async (e: React.FormEvent) => {
+        e.preventDefault();
         try {
-            const { data } = await axios.post('http://localhost:5000/phases', {
+            const { data } = await axios.post("http://localhost:5000/phases", {
                 name: newPhaseName,
             });
-            syncData([...phases, { _id: data, name: newPhaseName, tasks: []}]);
-            setNewPhaseName('');
+            syncData([...phases, { _id: data, name: newPhaseName, tasks: [] }]);
+            setNewPhaseName("");
         } catch (error) {
-            console.error('Error adding phase:', error);
+            console.error("Error adding phase:", error);
         }
     };
 
-    const editPhaseName = async (phaseId: string, newName: string) => {
-        try {
-            await axios.put(`http://localhost:5000/phases/${phaseId}`, {
-                name: newName,
-            });
-            const updatedPhases = phases.map((phase) =>
-                phase._id === phaseId ? { ...phase, name: newName } : phase
-            );
-            syncData(updatedPhases);
-        } catch (error) {
-            console.error("Error editing phase name:", error);
-        }
-    };
-
-    const filteredPhases = phases.map(phase => ({
+    const filteredPhases = phases.map((phase) => ({
         ...phase,
-        tasks: phase.tasks.filter(task =>
+        tasks: phase.tasks.filter((task) =>
             task.name.toLowerCase().includes(searchQuery.toLowerCase())
-        )
+        ),
     }));
 
     return (
-        <div className="kanban-board">
-            <h1>Kanban Board</h1>
-            <div className="search-container">
-                <input
+        <div className="container mx-auto p-8 h-full">
+            <h1 className="scroll-m-20 text-4xl font-extrabold tracking-tight lg:text-5xl mb-12">Kanban Board</h1>
+            <div className="relative w-full mb-8">
+                <Input
                     type="text"
                     ref={inputRef}
                     placeholder="Search tasks..."
+                    className="w-96"
                     onChange={(e) => {
                         setTimeout(() => setSearchQuery(e.target.value), 500);
                     }}
                 />
-                {searchQuery && (
-                    <span className="clear-button" onClick={() => {
-                        setSearchQuery('');
-                        if (inputRef.current) {
-                            inputRef.current.value = '';
-                        }
-                    }}>
-                        &#x2715;
-                    </span>
-                )}
-            </div>
-            <div className="add-phase">
-                <input
-                    type="text"
-                    value={newPhaseName}
-                    onChange={(e) => setNewPhaseName(e.target.value)}
-                    placeholder="Enter phase name"
-                />
-                <button onClick={handleAddPhase}>Add Phase</button>
             </div>
             <DragDropContext onDragEnd={onDragEnd}>
-                <div className="phases-container">
+                <div className="flex space-x-4 items-start mt-8">
                     {filteredPhases.map((phase) => (
-                        <div className="phase-column" key={phase._id}>
-                            <h2>{phase.name} ({phase.tasks.length})</h2>
-                            <button onClick={() => setSelectedPhaseId(phase._id)}>
-                                Delete
-                            </button>
-                            <button
-                                onClick={() => {
-                                    const newName = prompt("Enter new name:");
-                                    if (newName) {
-                                        editPhaseName(phase._id, newName);
-                                    }
-                                }}
-                            >
-                                Edit
-                            </button>
-                            <Droppable droppableId={phase._id}>
-                                {(provided) => (
-                                    <div
-                                        ref={provided.innerRef}
-                                        {...provided.droppableProps}
-                                        className="task-list"
-                                    >
-                                        {phase.tasks.map((task, index) => (
-                                            <TaskItem
-                                                key={task._id}
-                                                task={task}
-                                                index={index}
-                                            />
-                                        ))}
-                                        {provided.placeholder}
-                                    </div>
-                                )}
-                            </Droppable>
-                            <AddTaskForm
-                                phaseId={phase._id}
-                                onTaskAdded={({ name, _id }) => {
-                                    syncData(
-                                        phases.map((p) => {
-                                            if (p._id === phase._id) {
-                                                return {
-                                                    ...p,
-                                                    tasks: [
-                                                        ...p.tasks,
-                                                        {
-                                                            _id,
-                                                            name,
-                                                            phaseId: p._id,
-                                                            createdAt: new Date().toISOString(),
-                                                            updatedAt: new Date().toISOString(),
-                                                        },
-                                                    ],
-                                                };
-                                            }
-                                            return p;
-                                        })
-                                    );
-                                }}
+                        <div
+                            key={phase._id}
+                            className="border border-gray-200 p-4 rounded-lg h-100"
+                        >
+                            <PhaseColumn
+                                phase={phase}
+                                onDelete={setSelectedPhaseId}
                             />
                         </div>
                     ))}
+                    <form
+                        onSubmit={handleAddPhase}
+                        className="flex w-full max-w-sm items-center space-x-2"
+                    >
+                        <Input
+                            type="text"
+                            value={newPhaseName}
+                            onChange={(e) => setNewPhaseName(e.target.value)}
+                            placeholder="Enter phase name"
+                        />
+                        <Button type="submit">Add Phase</Button>
+                    </form>
                 </div>
             </DragDropContext>
 
             {selectedPhaseId && (
                 <DeletePhaseModal
                     phaseId={selectedPhaseId}
+                    open={!!selectedPhaseId}
                     onClose={() => setSelectedPhaseId("")}
                 />
             )}
