@@ -1,5 +1,7 @@
 # Kanban App - Vite + React + Shadcn UI Frontend with Express.js Backend
 
+![image](https://github.com/tirthajyoti-ghosh/kanban-app/assets/57726348/06b7a3b8-7169-4229-b01e-7379a937c82e)
+
 ### Features
 
 The application implements some of the features of JIRA kanban board. The application has the following features:

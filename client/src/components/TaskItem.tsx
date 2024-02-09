@@ -86,7 +86,9 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, index }) => {
                             />
                         ) : (
                             <div className="flex items-center justify-between">
-                                <p>{taskName}</p>
+                                <p className="font-sans text-md text-gray-800 px-4 py-2 rounded-lg overflow-hidden overflow-ellipsis">
+                                    {taskName}
+                                </p>
                                 <DropdownMenu>
                                     <DropdownMenuTrigger><MoreVertical size={15} /></DropdownMenuTrigger>
                                     <DropdownMenuContent>

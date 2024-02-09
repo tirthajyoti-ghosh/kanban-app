@@ -7,6 +7,7 @@ import { useTaskContext } from "./context/useTaskContext";
 import "./index.css";
 import DeletePhaseModal from "./components/DeletePhaseModal";
 import PhaseColumn from "./components/PhaseColumn";
+import { Plus } from "lucide-react";
 
 const KanbanBoard: React.FC = () => {
     const { phases, syncData } = useTaskContext();
@@ -111,11 +112,11 @@ const KanbanBoard: React.FC = () => {
                 />
             </div>
             <DragDropContext onDragEnd={onDragEnd}>
-                <div className="flex space-x-4 items-start mt-8">
+                <div className="flex space-x-4 items-start mt-8 overflow-x-auto">
                     {filteredPhases.map((phase) => (
                         <div
                             key={phase._id}
-                            className="border border-gray-200 p-4 rounded-lg h-100"
+                            className="border border-gray-200 p-4 rounded-lg h-100 w-80"
                         >
                             <PhaseColumn
                                 phase={phase}
@@ -133,7 +134,7 @@ const KanbanBoard: React.FC = () => {
                             onChange={(e) => setNewPhaseName(e.target.value)}
                             placeholder="Enter phase name"
                         />
-                        <Button type="submit">Add Phase</Button>
+                        <Button type="submit"><Plus /></Button>
                     </form>
                 </div>
             </DragDropContext>
