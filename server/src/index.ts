@@ -17,7 +17,7 @@ let db: Database;
 if (process.env.RUNNING_IN_DOCKER) {
   db = new MongoDatabase('mongodb://mongo:27017', 'kanban');
 } else {
-  db = new FileDatabase('../data/phases.json', './data/tasks.json');
+  db = new FileDatabase('../db/phases.json', '../db/tasks.json');
 }
 
 app.get('/phases', async (req, res) => {
@@ -40,6 +40,7 @@ app.delete('/phases/:id', async (req, res) => {
     res.status(400).json({ error: 'altPhaseId query parameter is required' });
     return;
   }
+  
   await db.deletePhase(req.params.id, req.query.altPhaseId as string);
   res.status(204).end();
 });

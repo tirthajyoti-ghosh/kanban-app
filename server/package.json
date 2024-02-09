@@ -4,7 +4,7 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "start": "nodemon -L --watch 'src/**/*.ts' --exec 'ts-node' src/index.ts"
+    "start": "nodemon -L --watch src --ext ts --exec npx ts-node src/index.ts"
   },
   "dependencies": {
     "cors": "^2.8.5",

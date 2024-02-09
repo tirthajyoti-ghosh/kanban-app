@@ -8,34 +8,47 @@ const dbName = 'kanban';
 const client = new MongoClient(url);
 
 // Filesystem DB setup
-const dbPath = '../data/phases.json';
+const phasesDBPath = path.join(__dirname, '../db/phases.json');
 
 // Phases
 const phases = ['todo', 'in progress', 'done'];
 
 async function initDB() {
     try {
-        await client.connect();
-        console.log("Connected correctly to server");
-        const db = client.db(dbName);
-        const collection = db.collection('phases');
+        if (process.env.RUNNING_IN_DOCKER) {
+            await client.connect();
+            console.log("Connected correctly to server");
+            const db = client.db(dbName);
+            const collection = db.collection('phases');
 
-        for (let phase of phases) {
-            const phaseExist = await collection.findOne({ name: phase });
-            if (!phaseExist) {
-                await collection.insertOne({ name: phase, taskIds: [], createdAt: new Date(), updatedAt: new Date() });
+            if (await collection.countDocuments({}) > 0) {
+                return;
             }
-        }
 
-        const fileDB = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
-
-        for (let phase of phases) {
-            if (!fileDB.find((p: any) => p.name === phase)) {
-                fileDB.push({ _id: new ObjectId().toString(), name, taskIds: [], createdAt: new Date(), updatedAt: new Date() });
+            for (let phase of phases) {
+                const phaseExist = await collection.findOne({ name: phase });
+                if (!phaseExist) {
+                    await collection.insertOne({ name: phase, taskIds: [], createdAt: new Date(), updatedAt: new Date() });
+                }
             }
-        }
+        } else {
 
-        fs.writeFileSync(dbPath, JSON.stringify(fileDB));
+            // Filesystem DB
+            const phasesDB = fs.readFileSync(phasesDBPath, 'utf-8');
+            const fileDB = JSON.parse(phasesDB);
+
+            if (fileDB.length > 0) {
+                return;
+            }
+
+            for (let phase of phases) {
+                if (!fileDB.find((p: any) => p.name === phase)) {
+                    fileDB.push({ _id: new ObjectId().toString(), name: phase, taskIds: [], createdAt: new Date(), updatedAt: new Date() });
+                }
+            }
+
+            fs.writeFileSync(phasesDBPath, JSON.stringify(fileDB));
+        }
 
     } catch (err) {
         console.log(err);
