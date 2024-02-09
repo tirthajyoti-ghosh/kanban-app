@@ -60,13 +60,13 @@ const DeletePhaseModal = ({ phaseId, open, onClose }: DeletePhaseModalProps) => 
     };
 
     return (
-        <Dialog open={open}>
+        <Dialog open={open} onOpenChange={onClose}>
             <DialogContent>
                 <DialogHeader className="flex-row items-center gap-2">
                     <AlertTriangle className="mt-1" size="24" />
                     <p className="text-lg font-bold mt-0">
                         Delete Phase
-                        </p>
+                    </p>
                 </DialogHeader>
                 <DialogDescription>
                     Select a new home for the tasks in this phase
