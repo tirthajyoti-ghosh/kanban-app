@@ -117,3 +117,30 @@
 .delete-phase-modal-content button:hover {
   background-color: #d32f2f;
 }
+
+.search-container {
+  position: relative;
+  margin-bottom: 20px;
+  width: 300px;
+  border: 1px solid #000000;
+  border-radius: 5px;
+  padding: 10px 20px;
+}
+
+.search-input {
+  width: 100%;
+  border: 1px solid #00000000;
+  font-size: 16px;
+}
+
+.clear-button {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  cursor: pointer;
+}
+
+.clear-button:hover {
+  color: red;
+}

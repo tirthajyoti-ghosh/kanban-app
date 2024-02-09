@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import axios from "axios";
 import { DragDropContext, Droppable, DropResult } from "react-beautiful-dnd";
 import TaskItem from "./TaskItem";
@@ -11,6 +11,8 @@ const KanbanBoard: React.FC = () => {
     const { phases, syncData } = useTaskContext();
     const [selectedPhaseId, setSelectedPhaseId] = useState("");
     const [newPhaseName, setNewPhaseName] = useState('');
+    const [searchQuery, setSearchQuery] = useState('');
+    const inputRef = useRef<HTMLInputElement>(null);
 
     const onDragEnd = async (result: DropResult) => {
         const { source, destination, draggableId } = result;
@@ -99,9 +101,36 @@ const KanbanBoard: React.FC = () => {
         }
     };
 
+    const filteredPhases = phases.map(phase => ({
+        ...phase,
+        tasks: phase.tasks.filter(task =>
+            task.name.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+    }));
+
     return (
         <div className="kanban-board">
-            <h1>Kanban Board</h1>            
+            <h1>Kanban Board</h1>
+            <div className="search-container">
+                <input
+                    type="text"
+                    ref={inputRef}
+                    placeholder="Search tasks..."
+                    onChange={(e) => {
+                        setTimeout(() => setSearchQuery(e.target.value), 500);
+                    }}
+                />
+                {searchQuery && (
+                    <span className="clear-button" onClick={() => {
+                        setSearchQuery('');
+                        if (inputRef.current) {
+                            inputRef.current.value = '';
+                        }
+                    }}>
+                        &#x2715;
+                    </span>
+                )}
+            </div>
             <div className="add-phase">
                 <input
                     type="text"
@@ -113,7 +142,7 @@ const KanbanBoard: React.FC = () => {
             </div>
             <DragDropContext onDragEnd={onDragEnd}>
                 <div className="phases-container">
-                    {phases.map((phase) => (
+                    {filteredPhases.map((phase) => (
                         <div className="phase-column" key={phase._id}>
                             <h2>{phase.name} ({phase.tasks.length})</h2>
                             <button onClick={() => setSelectedPhaseId(phase._id)}>
