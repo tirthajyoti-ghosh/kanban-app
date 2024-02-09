@@ -21,7 +21,7 @@ services:
         source: ./client
         target: /usr/src/app
     ports:
-      - '3000:3000'
+      - '5173:5173'
   mongo:
     image: mongo
     volumes:
