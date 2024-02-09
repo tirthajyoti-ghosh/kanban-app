@@ -1,5 +1,6 @@
 import fs from 'fs';
 import { MongoClient, ObjectId } from 'mongodb';
+import path from 'path';
 
 interface Database {
     getPhases(): Promise<any[]>;
@@ -144,9 +145,9 @@ class FileDatabase implements Database {
     private phasesDbPath: string;
     private tasksDbPath: string;
 
-    constructor(PhasesDbPath: string, tasksDbPath: string) {
-        this.phasesDbPath = PhasesDbPath;
-        this.tasksDbPath = tasksDbPath;
+    constructor(phasesDbPath: string, tasksDbPath: string) {
+        this.phasesDbPath = path.join(__dirname, phasesDbPath);
+        this.tasksDbPath = path.join(__dirname, tasksDbPath);
     }
 
     private readPhasesDB() {
@@ -179,12 +180,12 @@ class FileDatabase implements Database {
         const newPhase = { _id: new ObjectId().toString(), name, taskIds: [], createdAt: new Date(), updatedAt: new Date() };
         data.push(newPhase);
         this.writePhasesDB(data);
-        return newPhase;
+        return newPhase._id;
     }
 
     async updatePhase(id: string, name: string) {
         const data = this.readPhasesDB();
-        const phase = data.find((b: any) => b.id === id);
+        const phase = data.find((b: any) => b._id === id);
         if (phase) {
             phase.name = name;
             phase.updatedAt = new Date();
@@ -195,27 +196,39 @@ class FileDatabase implements Database {
 
     async deletePhase(id: string, altPhaseId: string) {
         const data = this.readPhasesDB();
+        const tasks = this.readTasksDB();
 
-        const phaseIndex = data.findIndex((b: any) => b.id === id);
+        const phaseIndex = data.findIndex((b: any) => b._id === id);
         if (phaseIndex > -1) {
-            const [phase] = data.splice(phaseIndex, 1);
-            const altPhase = data.find((b: any) => b.id === altPhaseId);
+            const phase = data[phaseIndex];
+            console.log(phase);
+            
+            const altPhase = data.find((b: any) => b._id === altPhaseId);
+            console.log(altPhase);
+            
             if (altPhase) {
                 altPhase.taskIds.push(...phase.taskIds);
             }
-        }
-        
-        this.writePhasesDB(data);
+
+            tasks.forEach((task: any) => {
+                if (task.phaseId === id) {
+                    task.phaseId = altPhaseId;
+                }
+            });
+        }  
+
+        this.writePhasesDB(data.filter((b: any) => b._id !== id));
+        this.writeTasksDB(tasks);
     }
 
     async getTasks(phaseId: string) {
         const data = this.readTasksDB();
         const phases = this.readPhasesDB();
         const tasks = data.filter((t: any) => t.phaseId === phaseId);
-        const phase = phases.find((b: any) => b.id === phaseId);
+        const phase = phases.find((b: any) => b._id === phaseId);
 
         if (phase) {
-            tasks.sort((a: { id: any; }, b: { id: any; }) => phase.taskIds.indexOf(a.id) - phase.taskIds.indexOf(b.id));
+            tasks.sort((a: any, b: any) => phase.taskIds.indexOf(a._id) - phase.taskIds.indexOf(b._id));
         }
 
         return tasks;
@@ -227,19 +240,20 @@ class FileDatabase implements Database {
         const newTask = { _id: new ObjectId().toString(), phaseId, name, createdAt: new Date(), updatedAt: new Date() };
 
         data.push(newTask);
-        const phase = phases.find((b: any) => b.id === phaseId);
+        const phase = phases.find((b: any) => b._id === phaseId);
+        
         if (phase) {
             phase.taskIds.push(newTask._id);
         }
 
         this.writeTasksDB(data);
         this.writePhasesDB(phases);
-        return newTask;
+        return newTask._id;
     }
 
     async updateTask(id: string, name: string) {
         const data = this.readTasksDB();
-        const task = data.find((t: any) => t.id === id);
+        const task = data.find((t: any) => t._id === id);
         if (task) {
             task.name = name;
             task.updatedAt = new Date();
@@ -252,10 +266,10 @@ class FileDatabase implements Database {
         const data = this.readTasksDB();
         const phases = this.readPhasesDB();
 
-        const taskIndex = data.findIndex((t: any) => t.id === id);
+        const taskIndex = data.findIndex((t: any) => t._id === id);
         if (taskIndex > -1) {
             const [task] = data.splice(taskIndex, 1);
-            const phase = phases.find((b: any) => b.id === task.phaseId);
+            const phase = phases.find((b: any) => b._id === task.phaseId);
             if (phase) {
                 phase.taskIds = phase.taskIds.filter((taskId: string) => taskId !== id);
             }
@@ -271,7 +285,7 @@ class FileDatabase implements Database {
 
         // If the task is moved within the same phase
         if (sourcePhaseId === targetPhaseId) {
-            const phase = phases.find((b: any) => b.id === sourcePhaseId);
+            const phase = phases.find((b: any) => b._id === sourcePhaseId);
             if (phase) {
                 const index = phase.taskIds.indexOf(taskId);
                 if (index > -1) {
@@ -283,21 +297,21 @@ class FileDatabase implements Database {
         // If the task is moved to a different phase
         else {
             // Remove taskId from source phase
-            const sourcePhase = phases.find((b: any) => b.id === sourcePhaseId);
+            const sourcePhase = phases.find((b: any) => b._id === sourcePhaseId);
             if (sourcePhase) {
                 sourcePhase.taskIds = sourcePhase.taskIds.filter((id: string) => id !== taskId);
             }
 
             // Add taskId to target phase at the new position
-            const targetPhase = phases.find((b: any) => b.id === targetPhaseId);
+            const targetPhase = phases.find((b: any) => b._id === targetPhaseId);
             if (targetPhase) {
                 targetPhase.taskIds.splice(newPosition, 0, taskId);
             }
         }
-        // Update boardId of the task
-        const task = data.find((t: any) => t.id === taskId);
+        // Update phaseId of the task
+        const task = data.find((t: any) => t._id === taskId);
         if (task) {
-            task.boardId = targetPhaseId;
+            task.phaseId = targetPhaseId;
         }
 
         this.writeTasksDB(data);
