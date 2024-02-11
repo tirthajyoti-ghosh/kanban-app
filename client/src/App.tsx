@@ -112,11 +112,11 @@ const KanbanBoard: React.FC = () => {
                 />
             </div>
             <DragDropContext onDragEnd={onDragEnd}>
-                <div className="flex space-x-4 items-start mt-8 overflow-x-auto">
+                <div className="flex space-x-4 items-start mt-8 overflow-x-auto h-full">
                     {filteredPhases.map((phase) => (
                         <div
                             key={phase._id}
-                            className="border border-gray-200 p-4 rounded-lg h-100 w-80"
+                            className="border border-gray-200 p-4 rounded-lg h-100 w-full min-w-[300px]"
                         >
                             <PhaseColumn
                                 phase={phase}
@@ -126,7 +126,7 @@ const KanbanBoard: React.FC = () => {
                     ))}
                     <form
                         onSubmit={handleAddPhase}
-                        className="flex w-full max-w-sm items-center space-x-2"
+                        className="flex w-full max-w-sm items-center space-x-2 w-full min-w-[300px]"
                     >
                         <Input
                             type="text"
